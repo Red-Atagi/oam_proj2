@@ -1,0 +1,113 @@
+<script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
+<script src="https://tonejs.github.io/build/Tone.js"></script>
+
+<button>randomize</button>
+<button id="toggle">start</button>
+
+<script>
+  /* global nn, Tone */
+
+  const sampler = -1
+  const state = {
+    step: 0,
+    bar: 0, 
+    totalSteps: 8,
+    totalBars: 4,
+    vocalScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+    vocalArp: [
+      [6, 3, 1, 6, 3, 1, 6, 3],
+      [5, 3, 0, 5, 3, 0, 5, 3],
+      [5, 3, 0, 5, 3, 0, 5, 3],
+      [4, 2, 0, 4, 2, 0, 4, 2]
+ 		],
+  //   ukuleleScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+  //   ukuleleChrd: [
+  //   [1, 3, 6],
+  //   [0, 3, 5],
+  //   [0, 3, 5],
+  //   [0, 2, 4]
+  // ]
+}
+
+  function createScale(root, pattern) {
+    const scale = [root]
+    let note = root.slice(0, -1) // ex: 'C' from 'C4'
+    let octave = parseInt(root.slice(-1)) // ex: 4 from 'C4'
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+    for (const step of pattern) {
+      const noteIndex = notes.indexOf(note)
+      const nextNoteIndex = (noteIndex + step) % notes.length
+      if (nextNoteIndex < noteIndex) octave += 1
+      note = notes[nextNoteIndex]
+      scale.push(note + octave)
+    }
+
+    return scale
+  }
+  
+  function createVocals () {
+    //chances that a note length will occur
+    //eight abd quarter are higher prob because that's natural speach pattern
+    let wholeProb = {upper: 1, lower: 0.95}
+    let halfProb = {upper: 0.95, lower: 0.8}
+    let quarterProb = {upper: 0.8, lower: 0.5}
+    let eighthProb = {upper: 0.5, lower: 0}
+		//leap probalities
+
+    
+    let startNote = nn.randomInt(0, 7)
+    
+    for (let i = 0; i < 4; i++) {
+      let beatsLeft = 4
+      let noteLength
+      while (beatsLeft > 0) {
+        let bar = [-1, -1, -1, -1, -1, -1, -1, -1]
+        //choosing length of note
+        let randFloat = Math.random()
+        if (eighthProb.upper > randFloat && randFloat >= eighthProb.lower) {
+          noteLength = 8
+        } else if (quarterProb.upper > randFloat && randFloat >= quarterProb.lower) {
+          noteLength = 4
+      	} else if (halfProb.upper > randFloat && randFloat >= halfProb.lower) {
+          noteLength = 2
+        } else {
+          noteLength = 1
+        }
+        //choosing the note
+        let randLeap = nn.random(0, 3)
+        startNote = Math.random() > 0.5 ? startNote + randLeap : startNote - randLeap
+        
+      }
+    }
+  }
+  
+  function notesFromScale (arr, scale) {
+  const notes = []
+  for (let i = 0; i < arr.length; i++) {
+    const idx = arr[i]
+    const note = scale[idx]
+    notes.push(note)
+  }
+  return notes
+}
+  
+  function play (time) {
+    if (sampler.loaded === false) {
+      nn.get('#toggle').content('...loading...')
+      return // exit the function
+    } else {
+      nn.get('#toggle').content('stop')
+    }
+
+    // get current step && bar index
+  	const s = state.step % state.totalSteps
+  	const b = state.bar % state.totalBars
+    
+  	const arp = state.rightHandArp[b]
+  	const notes = notesFromScale(arp, state.rightHandScale)
+  	const note = notes[s]
+  	sampler.triggerAttackRelease(note, '8n', time)  
+  }
+  
+</script>
