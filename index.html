@@ -1,20 +1,57 @@
 <script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
 <script src="https://tonejs.github.io/build/Tone.js"></script>
 
-<button>randomize</button>
+<button id="randomize">randomize</button>
 <button id="toggle">start</button>
 
 <script>
   /* global nn, Tone */
+  let firstclick = false
 
-  const sampler = -1
+  const sampler = new Tone.Sampler({
+  urls: {
+    'A0': 'A0.mp3',
+    'C1': 'C1.mp3',
+    'D#1': 'Ds1.mp3',
+    'F#1': 'Fs1.mp3',
+    'A1': 'A1.mp3',
+    'C2': 'C2.mp3',
+    'D#2': 'Ds2.mp3',
+    'F#2': 'Fs2.mp3',
+    'A2': 'A2.mp3',
+    'C3': 'C3.mp3',
+    'D#3': 'Ds3.mp3',
+    'F#3': 'Fs3.mp3',
+    'A3': 'A3.mp3',
+    'C4': 'C4.mp3',
+    'D#4': 'Ds4.mp3',
+    'F#4': 'Fs4.mp3',
+    'A4': 'A4.mp3',
+    'C5': 'C5.mp3',
+    'D#5': 'Ds5.mp3',
+    'F#5': 'Fs5.mp3',
+    'A5': 'A5.mp3',
+    'C6': 'C6.mp3',
+    'D#6': 'Ds6.mp3',
+    'F#6': 'Fs6.mp3',
+    'A6': 'A6.mp3',
+    'C7': 'C7.mp3',
+    'D#7': 'Ds7.mp3',
+    'F#7': 'Fs7.mp3',
+    'A7': 'A7.mp3',
+    'C8': 'C8.mp3'
+  },
+  release: 1,
+  baseUrl: "https://tonejs.github.io/audio/salamander/"
+}).toDestination()
+  
   const state = {
     step: 0,
     bar: 0, 
     totalSteps: 8,
     totalBars: 4,
-    vocalScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
-    vocalArp: [
+    vocalsScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+    vocals: [
       [6, 3, 1, 6, 3, 1, 6, 3],
       [5, 3, 0, 5, 3, 0, 5, 3],
       [5, 3, 0, 5, 3, 0, 5, 3],
@@ -47,50 +84,63 @@
   }
   
   function createVocals () {
-    //chances that a note length will occur
-    //eight abd quarter are higher prob because that's natural speach pattern
-    let wholeProb = {upper: 1, lower: 0.95}
-    let halfProb = {upper: 0.95, lower: 0.8}
-    let quarterProb = {upper: 0.8, lower: 0.5}
-    let eighthProb = {upper: 0.5, lower: 0}
-		//leap probalities
-
+    state.vocals = []
     
-    let startNote = nn.randomInt(0, 7)
+    let note = nn.randomInt(0, 7)
     
     for (let i = 0; i < 4; i++) {
+      //chances that a note length will occur
+      //eight abd quarter are higher prob because that's natural speach pattern
+      let wholeProb = {upper: 1, lower: 0.95}
+      let halfProb = {upper: 0.95, lower: 0.8}
+      let quarterProb = {upper: 0.8, lower: 0.5}
+      let eighthProb = {upper: 0.5, lower: 0}
+      //prep for while loop
       let beatsLeft = 4
-      let noteLength
+      let bar = [-1, -1, -1, -1, -1, -1, -1, -1]
+      //checks if we changed the probability for whole, half, and quarter notes
+      let wholeCheck = false
+      let halfCheck = false
       while (beatsLeft > 0) {
-        let bar = [-1, -1, -1, -1, -1, -1, -1, -1]
         //choosing length of note
         let randFloat = Math.random()
-        if (eighthProb.upper > randFloat && randFloat >= eighthProb.lower) {
+        let noteLength
+        if (eighthProb.upper >= randFloat && randFloat > eighthProb.lower) {
           noteLength = 8
-        } else if (quarterProb.upper > randFloat && randFloat >= quarterProb.lower) {
+        } else if (quarterProb.upper >= randFloat && randFloat > quarterProb.lower) {
           noteLength = 4
-      	} else if (halfProb.upper > randFloat && randFloat >= halfProb.lower) {
+        } else if (halfProb.upper >= randFloat && randFloat > halfProb.lower) {
           noteLength = 2
         } else {
           noteLength = 1
         }
         //choosing the note
-        let randLeap = nn.random(0, 3)
-        startNote = Math.random() > 0.5 ? startNote + randLeap : startNote - randLeap
-        
+        let randLeap = nn.randomInt(0, 2)
+        note = Math.random() > 0.5 ? note + randLeap : note - randLeap
+        note = Math.abs(note) % 8
+        //adding it to the bar
+        bar[(4 - beatsLeft)*2] = {n:note, len:`${noteLength}n`}
+
+        //changing the probabilities so we don't get a whole note on beat 2
+        beatsLeft -= 4/noteLength
+
+        if (!wholeCheck && beatsLeft < 4) {
+          halfProb.upper += wholeProb.upper - wholeProb.lower
+          halfProb.lower += wholeProb.upper - wholeProb.lower
+          quarterProb.upper += wholeProb.upper - wholeProb.lower
+        }
+        if (!halfCheck && beatsLeft < 2) {
+          quarterProb.upper += halfProb.upper - halfProb.lower
+          quarterProb.lower += halfProb.upper - halfProb.lower
+          eighthProb.upper += halfProb.upper - halfProb.lower
+        }
+        if (beatsLeft < 1) {
+          eighthProb.upper = 1
+        }
       }
+      state.vocals.push(bar)
     }
   }
-  
-  function notesFromScale (arr, scale) {
-  const notes = []
-  for (let i = 0; i < arr.length; i++) {
-    const idx = arr[i]
-    const note = scale[idx]
-    notes.push(note)
-  }
-  return notes
-}
   
   function play (time) {
     if (sampler.loaded === false) {
@@ -104,10 +154,35 @@
   	const s = state.step % state.totalSteps
   	const b = state.bar % state.totalBars
     
-  	const arp = state.rightHandArp[b]
-  	const notes = notesFromScale(arp, state.rightHandScale)
-  	const note = notes[s]
-  	sampler.triggerAttackRelease(note, '8n', time)  
+  	const vocalsBar = state.vocals[b]
+    console.log(vocalsBar)
+    if (vocalsBar[s] !== -1) {
+      const note = state.vocalsScale[vocalsBar[s].n]
+      const length = vocalsBar[s].len
+      sampler.triggerAttackRelease(note, length, time)  
+    }
+  state.step++
+  if (s === state.totalSteps - 1) state.bar++
   }
+
+  async function toggle() {
+    if (firstclick === false) {
+      await Tone.start()
+      createVocals()
+      firstclick = true
+    }
+
+    if (Tone.Transport.state === 'started') {
+      Tone.Transport.stop()
+      nn.get('#toggle').content('start')
+    } else {
+      Tone.Transport.start()
+      nn.get('#toggle').content('stop')
+    }
+}
+  
+Tone.Transport.scheduleRepeat(time => play(time), '8n')
+nn.get('#toggle').on('click', toggle)
+nn.get('#randomize').on('click', createVocals)
   
 </script>
