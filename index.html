@@ -180,21 +180,21 @@
       }
     }
     
-    let max = [0, []]
+    let max = 0
+    let maxIndex = []
     for (let i = 0; i < chordCount.length; i++) {
-      if (chordCount[i] > max[0]) {
-        max[0] = chordCount[i]
-        max[1] = [i]
-      } else if (chordCount[i] === max[0]) {
-        max[1].push(i)
+      if (chordCount[i] > max) {
+        max = chordCount[i]
+        maxIndex = [i]
+      } else if (chordCount[i] === max) {
+        maxIndex.push(i)
       }
     }
     
     let harmonyChords = []
-    for (let i = 0; max[1].length; i++) {
-      harmonyChords.push(chords[max[1][i]])
+    for (let i = 0; i < maxIndex.length; i++) {
+      harmonyChords.push(chords[maxIndex[i]])
     }
-    console.log(harmonyChords)
     return harmonyChords
 }
   
@@ -203,6 +203,7 @@
     for (let i = 0; i < state.vocals.length; i++) {
       stringsHarmony.push(nn.random(harmonyChords(state.vocals[i])))
     }
+    console.log(stringsHarmony)
     state.stringChords = stringsHarmony
   }
   
