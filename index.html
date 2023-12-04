@@ -19,8 +19,11 @@
     },
     release: 2,
   baseUrl: "https://tonejs.github.io/audio/berklee/"
-	}).toDestination()
+	}).toMaster()
   
+  // let vol = new Tone.Volume(-12);
+  // samplerGuitar.chain(vol, samplerGuitar.toDestination());
+
   const sampler = new Tone.Sampler({
   urls: {
     'A0': 'A0.mp3',
@@ -86,7 +89,8 @@
       [0, 3, 5],
       [0, 3, 5],
       [0, 2, 4]
-    ]
+    ],
+    strumPattern: [true, false, true, false, true, false, true, false]
 }
 
   function createScale(root, pattern) {
@@ -203,13 +207,24 @@
     for (let i = 0; i < state.vocals.length; i++) {
       stringsHarmony.push(nn.random(harmonyChords(state.vocals[i])))
     }
-    console.log(stringsHarmony)
     state.stringChords = stringsHarmony
   }
   
   function randomSong() {
     createVocals()
+    console.log(state.vocals)
     createStrings()
+    console.log(state.stringChrd)
+  }
+  
+  function notesFromScale (arr, scale) {
+    const notes = []
+    for (let i = 0; i < arr.length; i++) {
+      const idx = arr[i]
+      const note = scale[idx]
+      notes.push(note)
+    }
+    return notes
   }
   
   function play (time) {
@@ -224,15 +239,21 @@
   	const s = state.step % state.totalSteps
   	const b = state.bar % state.totalBars
     
+    //play vocals
   	const vocalsBar = state.vocals[b]
-    console.log(vocalsBar)
     if (vocalsBar[s] !== -1) {
       const note = state.vocalsScale[vocalsBar[s].n]
       const length = vocalsBar[s].len
       sampler.triggerAttackRelease(note, length, time)  
     }
-  state.step++
-  if (s === state.totalSteps - 1) state.bar++
+    //play string
+    if (state.strumPattern[s]) {
+      const chord = state.stringChrd[b]
+      const notes = notesFromScale(chord, state.stringScale)
+      samplerGuitar.triggerAttackRelease(notes, '8n', time)
+    }    
+    state.step++
+    if (s === state.totalSteps - 1) state.bar++
   }
 
   async function toggle() {
