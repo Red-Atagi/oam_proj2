@@ -14,15 +14,11 @@
       'B3': 'guitar_Bstring.mp3',
       'D3': 'guitar_Dstring.mp3',
       'G3': 'guitar_Gstring.mp3',
-      'E2': 'guitar_LowEstring1.mp3',
       'E4': 'guitar_highEstring.mp3'
     },
     release: 2,
   baseUrl: "https://tonejs.github.io/audio/berklee/"
-	}).toMaster()
-  
-  // let vol = new Tone.Volume(-12);
-  // samplerGuitar.chain(vol, samplerGuitar.toDestination());
+	}).toDestination()
 
   const sampler = new Tone.Sampler({
   urls: {
@@ -57,7 +53,7 @@
     'A7': 'A7.mp3',
     'C8': 'C8.mp3'
   },
-  release: 1,
+  release: 2,
   baseUrl: "https://tonejs.github.io/audio/salamander/"
 }).toDestination()
   
@@ -68,7 +64,7 @@
     [0, 3, 5],
     [1, 4, 6],
     [0, 2, 5],
-    [2, 3, 1],
+    [1, 3, 6],
   ]
   
   const state = {
@@ -76,22 +72,21 @@
     bar: 0, 
     totalSteps: 8,
     totalBars: 4,
-    vocalsScale: [ 'F2', 'G2', 'G#2', 'A#2', 'C3', 'C#3', 'D#3', 'F3' ],
+    vocalsScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
     vocals: [
       [6, 3, 1, 6, 3, 1, 6, 3],
       [5, 3, 0, 5, 3, 0, 5, 3],
       [5, 3, 0, 5, 3, 0, 5, 3],
       [4, 2, 0, 4, 2, 0, 4, 2]
  		],
-    stringScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+    stringScale: [ 'F2', 'G2', 'G#2', 'A#2', 'C3', 'C#3', 'D#3', 'F3' ],
     stringChrd: [
       [1, 3, 6],
       [0, 3, 5],
       [0, 3, 5],
       [0, 2, 4]
     ],
-    strumPattern: [true, false, true, false, true, false, true, false]
-}
+  }
 
   function createScale(root, pattern) {
     const scale = [root]
@@ -118,10 +113,13 @@
     for (let i = 0; i < 4; i++) {
       //chances that a note length will occur
       //eight abd quarter are higher prob because that's natural speach pattern
-      let wholeProb = {upper: 1, lower: 0.95}
-      let halfProb = {upper: 0.95, lower: 0.8}
+      let wholeProb = {upper: 1, lower: 0.90}
+      let halfProb = {upper: 0.90, lower: 0.8}
       let quarterProb = {upper: 0.8, lower: 0.5}
       let eighthProb = {upper: 0.5, lower: 0}
+      //probability of steps
+      let stepProb0 = {upper: 1, lower: 0.8}
+      let stepProb1 = {upeer: 0.8, lower: 0.2}
       //prep for while loop
       let beatsLeft = 4
       let bar = [-1, -1, -1, -1, -1, -1, -1, -1]
@@ -142,8 +140,16 @@
           noteLength = 1
         }
         //choosing the note
-        let randLeap = nn.randomInt(0, 2)
-        note = Math.random() > 0.5 ? note + randLeap : note - randLeap
+        randFloat = Math.random()
+        let leap
+        if (stepProb0.upper >= randFloat && randFloat > stepProb0.lower) {
+          leap = 0
+        } else if (stepProb1.upper >= randFloat && randFloat > stepProb1.lower) {
+          leap = 1
+      	} else {
+          leap = 2
+        }
+        note = Math.random() > 0.5 ? note + leap : note - leap
         note = Math.abs(note) % 8
         //adding it to the bar
         bar[(4 - beatsLeft)*2] = {n:note, len:`${noteLength}n`}
@@ -171,15 +177,22 @@
   
   function harmonyChords(bar) {
     let notes = new Set([])
+    let firstNote = bar[0].n
     for (let i = 0; i < bar.length; i++) {
       notes.add(bar[i].n % 7) //mod 7 because 0 and 7 are the same notes
     }
+    
+    
     
     let chordCount = [0, 0, 0, 0, 0, 0, 0]
     for (let i = 0; i< chords.length; i++) {
       for (let j = 0; j < chords[i].length; j ++) {
          if (notes.has(chords[i][j])) {
            chordCount[i]++
+           //gurentees the chord chosen will have the first note 
+           if (chords[i][j] === firstNote) {
+             chordCount[i]+=10
+           }
          }
       }
     }
@@ -211,10 +224,19 @@
   }
   
   function randomSong() {
+    const minor = [2, 1, 2, 2, 1, 2, 2]
+    const major = [2, 2, 1, 2, 2, 2, 1]
+    const scale = Math.random() > 0.5 ? minor : major
+    const keys = [ 'F', 'D', 'G', 'C', 'D#', 'A#']
+    const tempo = { min: 70, max: 170 }
+    const key = nn.random(keys)
+    state.vocalScale = createScale(`${key}4`, scale)
+    state.stringScale = createScale(`${key}3`, scale)
+    Tone.Transport.bpm.value = nn.randomInt(tempo.min, tempo.max)
+    console.log(key, Tone.Transport.bpm.value, scale)
+    
     createVocals()
-    console.log(state.vocals)
     createStrings()
-    console.log(state.stringChrd)
   }
   
   function notesFromScale (arr, scale) {
@@ -247,10 +269,10 @@
       sampler.triggerAttackRelease(note, length, time)  
     }
     //play string
-    if (state.strumPattern[s]) {
+    if (s === 0) {
       const chord = state.stringChrd[b]
       const notes = notesFromScale(chord, state.stringScale)
-      samplerGuitar.triggerAttackRelease(notes, '8n', time)
+      sampler.triggerAttackRelease(notes, '1n', time, 0.5)
     }    
     state.step++
     if (s === state.totalSteps - 1) state.bar++
@@ -259,7 +281,7 @@
   async function toggle() {
     if (firstclick === false) {
       await Tone.start()
-      createVocals()
+      randomSong()
       firstclick = true
     }
 
