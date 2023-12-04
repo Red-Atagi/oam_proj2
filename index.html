@@ -58,6 +58,16 @@
   baseUrl: "https://tonejs.github.io/audio/salamander/"
 }).toDestination()
   
+  const chords = [
+    [0, 2, 4],
+    [1, 3, 5],
+    [2, 4, 6],
+    [0, 3, 5],
+    [1, 4, 6],
+    [0, 2, 5],
+    [2, 3, 1],
+  ]
+  
   const state = {
     step: 0,
     bar: 0, 
@@ -70,13 +80,13 @@
       [5, 3, 0, 5, 3, 0, 5, 3],
       [4, 2, 0, 4, 2, 0, 4, 2]
  		],
-  //   ukuleleScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
-  //   ukuleleChrd: [
-  //   [1, 3, 6],
-  //   [0, 3, 5],
-  //   [0, 3, 5],
-  //   [0, 2, 4]
-  // ]
+    stringScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+    stringChrd: [
+      [1, 3, 6],
+      [0, 3, 5],
+      [0, 3, 5],
+      [0, 2, 4]
+    ]
 }
 
   function createScale(root, pattern) {
@@ -155,6 +165,52 @@
     }
   }
   
+  function harmonyChords(bar) {
+    let notes = new Set([])
+    for (let i = 0; i < bar.length; i++) {
+      notes.add(bar[i].n % 7) //mod 7 because 0 and 7 are the same notes
+    }
+    
+    let chordCount = [0, 0, 0, 0, 0, 0, 0]
+    for (let i = 0; i< chords.length; i++) {
+      for (let j = 0; j < chords[i].length; j ++) {
+         if (notes.has(chords[i][j])) {
+           chordCount[i]++
+         }
+      }
+    }
+    
+    let max = [0, []]
+    for (let i = 0; i < chordCount.length; i++) {
+      if (chordCount[i] > max[0]) {
+        max[0] = chordCount[i]
+        max[1] = [i]
+      } else if (chordCount[i] === max[0]) {
+        max[1].push(i)
+      }
+    }
+    
+    let harmonyChords = []
+    for (let i = 0; max[1].length; i++) {
+      harmonyChords.push(chords[max[1][i]])
+    }
+    console.log(harmonyChords)
+    return harmonyChords
+}
+  
+  function createStrings() {
+   	let stringsHarmony = []
+    for (let i = 0; i < state.vocals.length; i++) {
+      stringsHarmony.push(nn.random(harmonyChords(state.vocals[i])))
+    }
+    state.stringChords = stringsHarmony
+  }
+  
+  function randomSong() {
+    createVocals()
+    createStrings()
+  }
+  
   function play (time) {
     if (sampler.loaded === false) {
       nn.get('#toggle').content('...loading...')
@@ -196,6 +252,6 @@
   
 Tone.Transport.scheduleRepeat(time => play(time), '8n')
 nn.get('#toggle').on('click', toggle)
-nn.get('#randomize').on('click', createVocals)
+nn.get('#randomize').on('click', randomSong)
   
 </script>
