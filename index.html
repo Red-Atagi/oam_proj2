@@ -8,6 +8,19 @@
   /* global nn, Tone */
   let firstclick = false
 
+  const samplerGuitar = new Tone.Sampler({
+    urls: {
+      'A2': 'guitar_Astring.mp3',
+      'B3': 'guitar_Bstring.mp3',
+      'D3': 'guitar_Dstring.mp3',
+      'G3': 'guitar_Gstring.mp3',
+      'E2': 'guitar_LowEstring1.mp3',
+      'E4': 'guitar_highEstring.mp3'
+    },
+    release: 2,
+  baseUrl: "https://tonejs.github.io/audio/berklee/"
+	}).toDestination()
+  
   const sampler = new Tone.Sampler({
   urls: {
     'A0': 'A0.mp3',
@@ -50,7 +63,7 @@
     bar: 0, 
     totalSteps: 8,
     totalBars: 4,
-    vocalsScale: [ 'F4', 'G4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5' ],
+    vocalsScale: [ 'F2', 'G2', 'G#2', 'A#2', 'C3', 'C#3', 'D#3', 'F3' ],
     vocals: [
       [6, 3, 1, 6, 3, 1, 6, 3],
       [5, 3, 0, 5, 3, 0, 5, 3],
